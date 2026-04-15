@@ -1,0 +1,112 @@
+/* should prolly go in App.css but whatever */
+html {
+    display: grid;
+    place-items: center;
+    color-scheme: light dark;
+}
+
+.header {
+    font-size: 35px;
+}
+
+
+[data-theme='light'] {
+    color-scheme: light only;
+}
+
+[data-theme='dark'] {
+    color-scheme: dark only;
+}
+
+header {
+    max-width: fit-content;
+    width: 60ch;
+    grid-column: 2;
+}
+body {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    color: light-dark(hsl(0 0% 24%), hsl(0 0% 98%));
+    letter-spacing: -0.02em;
+    align-content: start;
+    place-items: start;
+}
+footer {
+    width: 100%;
+    grid-column: 2;
+}
+
+.container {
+    display: inline-grid;
+    max-width: 100%;
+    padding-inline: 1rem;
+    grid-template-columns: auto 1fr;
+}
+main {
+    grid-column: 2;
+    width: 60ch;
+    max-width: fit-content;
+}
+
+header {
+    min-height: 10vh;
+    display: grid;
+    align-content: end;
+    padding-block: 4rem;
+
+
+    .author-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .author {
+        display: flex;
+        /* font-weight: 500; */
+        align-items: center;
+        gap: 1.5rem;
+        font-weight: 400;
+        font-size: 0.875rem;
+
+        span {
+            opacity: .7;
+        } 
+    }
+    img {
+        width: 24px;
+        aspect-ratio: 1;
+        border-radius: 50%;
+    }
+}
+
+section {
+    margin-bottom: 6rem;
+
+    &:last-of-type {
+        margin-top: 6rem;
+    }
+}
+
+h3 {
+    margin-top: 2rem;
+    margin-bottom: .5rem;
+}
+
+article p {
+    line-height: 1.5;
+    margin: 0;
+}
+
+article p:not(:last-of-type) {
+    margin-bottom: 1rem;
+}
+
+h1 {
+    --font-level: 4.5;
+    line-height: 1;
+    margin: 0;
+    margin-bottom: 2rem;
+    text-wrap: balance;
+}
+
