@@ -1,6 +1,8 @@
 quick project to view manpages in the browser
 
-not done yet, don't know if I'll manage to finish it
+when done, run bun run build to get static page with js and what not to serve the user
+
+not done yet, hope I'll manage to finish it
 
 System requirments: pandoc
 
