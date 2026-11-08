@@ -1,10 +1,10 @@
 pkgbase = manpage-git
 	pkgdesc = Browse local man pages in your web browser
-	pkgver = r8.c9e3aa8
+	pkgver = r10.2305e82
 	pkgrel = 1
 	url = https://github.com/2005Andrei/manpages
 	arch = any
-	license = LicenseRef-unknown
+	license = MIT
 	makedepends = git
 	makedepends = bun
 	depends = python
