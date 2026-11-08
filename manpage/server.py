@@ -75,7 +75,7 @@ def man_roots() -> list[Path]:
         except (OSError, subprocess.SubprocessError):
             pass
     if not roots:
-        roots = ["/usr/local/share/man", "/usr/share/man"]
+        roots = ["/usr/local/share/man", "/usr/share/man", "/opt/homebrew/share/man"]
     seen: set[Path] = set()
     result = []
     for r in roots:

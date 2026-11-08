@@ -12,7 +12,7 @@ Useful quick project to view manpages in the browser, you can view all manpages 
 
 <!-- Arch (AUR): `yay -S manpage-git` - not yet, not until they open new account registration -->
 
-From source (installs to `~/.local`, no root needed; requires `bun`, `python`, `man-db`):
+From source (Linux and macOS; installs to `~/.local`, no root needed; requires `bun`, `python`, `man-db`, and [`just`](https://github.com/casey/just)):
 
 ```sh
 just install      # PREFIX=/some/where just install to change the location
