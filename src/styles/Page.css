@@ -1,112 +1,190 @@
-/* should prolly go in App.css but whatever */
-html {
-    display: grid;
-    place-items: center;
-    color-scheme: light dark;
+.man {
+    line-height: 1.7;
+    font-size: 1rem;
+    color: var(--text);
+    overflow-wrap: break-word;
 }
 
-.header {
-    font-size: 35px;
+.man > h1#name,
+.man > h1#name + p {
+    display: none;
 }
 
-
-[data-theme='light'] {
-    color-scheme: light only;
+.man h1,
+.man h2,
+.man h3 {
+    color: var(--fg);
+    scroll-margin-top: 5rem;
+    line-height: 1.3;
 }
 
-[data-theme='dark'] {
-    color-scheme: dark only;
+.man h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 3rem 0 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    text-transform: lowercase;
+}
+.man h1::first-letter {
+    text-transform: uppercase;
+}
+.man > h1#synopsis {
+    margin-top: 0;
 }
 
-header {
-    max-width: fit-content;
-    width: 60ch;
-    grid-column: 2;
+.man h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 2rem 0 0.75rem;
 }
-body {
+
+.man h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem;
+}
+
+.man p {
+    margin: 0 0 1rem;
+}
+
+.man strong {
+    font-family: var(--mono);
+    font-size: 0.92em;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+.man em {
+    font-style: italic;
+    color: var(--accent);
+}
+
+/* synopsis gets a code-block look */
+.man p.synopsis {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+.man p.synopsis strong {
+    font-size: 1em;
+}
+
+/* option lists */
+.man dl {
+    margin: 0 0 1.5rem;
+}
+
+.man dt {
+    margin-top: 1rem;
+    font-family: var(--mono);
+    font-size: 0.9rem;
+}
+.man dt strong {
+    color: var(--opt);
+}
+.man dt:target,
+.man dt:hover {
+    color: var(--fg);
+}
+
+.man dd {
+    margin: 0.25rem 0 0 0;
+    padding-left: 1.5rem;
+    border-left: 2px solid var(--border);
+}
+.man dd > :last-child {
+    margin-bottom: 0;
+}
+
+.man pre {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    line-height: 1.55;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.85rem 1rem;
+    margin: 0 0 1rem;
+    overflow-x: auto;
+    white-space: pre;
+}
+.man pre strong {
+    font-size: 1em;
+}
+.man pre.fallback {
+    white-space: pre-wrap;
+}
+
+.man code {
+    background: var(--code-bg);
+    border-radius: 0.25rem;
+    padding: 0.1em 0.35em;
+}
+.man pre code {
+    background: none;
+    padding: 0;
+}
+
+.man ul,
+.man ol {
+    margin: 0 0 1rem;
+    padding-left: 1.5rem;
+}
+.man ul {
+    list-style: disc;
+}
+.man ol {
+    list-style: decimal;
+}
+.man li {
+    margin-bottom: 0.25rem;
+}
+
+.man table {
     display: block;
-    font-family: 'Inter', sans-serif;
-    color: light-dark(hsl(0 0% 24%), hsl(0 0% 98%));
-    letter-spacing: -0.02em;
-    align-content: start;
-    place-items: start;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
 }
-footer {
-    width: 100%;
-    grid-column: 2;
+.man th,
+.man td {
+    border: 1px solid var(--border);
+    padding: 0.35rem 0.6rem;
+    text-align: left;
+    vertical-align: top;
 }
-
-.container {
-    display: inline-grid;
-    max-width: 100%;
-    padding-inline: 1rem;
-    grid-template-columns: auto 1fr;
-}
-main {
-    grid-column: 2;
-    width: 60ch;
-    max-width: fit-content;
+.man th {
+    background: var(--code-bg);
+    color: var(--fg);
 }
 
-header {
-    min-height: 10vh;
-    display: grid;
-    align-content: end;
-    padding-block: 4rem;
-
-
-    .author-info {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .author {
-        display: flex;
-        /* font-weight: 500; */
-        align-items: center;
-        gap: 1.5rem;
-        font-weight: 400;
-        font-size: 0.875rem;
-
-        span {
-            opacity: .7;
-        } 
-    }
-    img {
-        width: 24px;
-        aspect-ratio: 1;
-        border-radius: 50%;
-    }
+.man a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-color: var(--accent-ring);
+    text-underline-offset: 2px;
+}
+.man a:hover {
+    text-decoration-color: var(--accent);
+}
+.man a.manref strong {
+    color: inherit;
 }
 
-section {
-    margin-bottom: 6rem;
-
-    &:last-of-type {
-        margin-top: 6rem;
-    }
+.man blockquote {
+    margin: 0 0 1rem;
+    padding-left: 1rem;
+    border-left: 3px solid var(--border);
 }
 
-h3 {
-    margin-top: 2rem;
-    margin-bottom: .5rem;
+.man hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
 }
-
-article p {
-    line-height: 1.5;
-    margin: 0;
-}
-
-article p:not(:last-of-type) {
-    margin-bottom: 1rem;
-}
-
-h1 {
-    --font-level: 4.5;
-    line-height: 1;
-    margin: 0;
-    margin-bottom: 2rem;
-    text-wrap: balance;
-}
-

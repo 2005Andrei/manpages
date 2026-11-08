@@ -1,121 +1,95 @@
-import { useState } from "react";
-import type { SearchResult } from "../utils/types";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import SearchBox from "../components/SearchBox";
+import { getSections } from "../utils/api";
+import type { Section } from "../utils/types";
+
+const QUICK = [
+    ["1", "ls"],
+    ["1", "grep"],
+    ["1", "find"],
+    ["1", "tar"],
+    ["1", "ssh"],
+    ["3", "printf"],
+    ["2", "open"],
+    ["5", "passwd"],
+    ["7", "regex"],
+];
 
 export default function Dashboard() {
-    const [query, setQuery] = useState("");
-    const [isOpen, setIsOpen] = useState(false);
-    // const [titles, setTitle] = useState();
+    const [sections, setSections] = useState<Section[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
-    const mock_data: SearchResult[] = [
-        {
-            id: "1",
-            title: "stdlib",
-            path: "man1",
-        },
-        {
-            id: "2",
-            title: "systemd",
-            path: "sth",
-        },
-        {
-            id: "3",
-            title: "systemctl",
-            path: "dif",
-        },
-        {
-            id: "4",
-            title: "uint32_t",
-            path: "types",
-        },
-        {
-            id: "5",
-            title: "uit64_t",
-            path: "more types",
-        },
-    ];
+    useEffect(() => {
+        const ctrl = new AbortController();
+        getSections(ctrl.signal)
+            .then(setSections)
+            .catch((e) => e.name !== "AbortError" && setError(e.message));
+        return () => ctrl.abort();
+    }, []);
 
-    const results = mock_data.filter((item) =>
-        item.title.toLowerCase().includes(query.toLowerCase()),
-    );
-
-    function handleClick() {
-        setIsOpen(true);
-    }
+    const total = sections.reduce((n, s) => n + s.count, 0);
 
     return (
-        <div className="flex justify-center w-200 p-6 bg-transparent min-h-[100px]">
-            <div onClick={handleClick} className="relative w-200 max-w-md">
-                <div className="relative z-10">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                        <svg
-                            className="w-5 h-5 text-gray-400"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2}
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                            />
-                        </svg>
-                    </div>
-                    <input
-                        type="text"
-                        className="w-full py-3 pl-12 pr-4 text-sm text-gray-700 transition-all duration-300 bg-white border border-gray-200 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-sm"
-                        placeholder="Search for man pages.."
-                        value={query}
-                        onChange={(e) => {
-                            setQuery(e.target.value);
-                            setIsOpen(true);
-                        }}
-                        onFocus={() => setIsOpen(true)}
-                    />
-                </div>
+        <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-4 pb-16 pt-[14vh]">
+            <h1 className="mb-2 font-mono text-5xl font-bold tracking-tight text-[var(--fg)]">
+                man<span className="text-[var(--accent)]">face</span>
+            </h1>
+            <p className="mb-10 text-center text-[var(--muted)]">
+                {total > 0
+                    ? `${total.toLocaleString()} manual pages on this machine, easier to read.`
+                    : "Your system manual, easier to read."}
+            </p>
 
-                <div
-                    className={`absolute left-0 right-0 mt-1 overflow-hidden bg-white border border-gray-100 rounded-2xl shadow-xl transition-all duration-200 origin-top ${
-                        isOpen && query.length > 0
-                            ? "opacity-100 scale-y-100 translate-y-0 visible"
-                            : "opacity-0 scale-y-95 -translate-y-2 invisible"
-                    }`}
-                >
-                    {results.length > 0 ? (
-                        <ul className="py-2 max-h-72 overflow-y-auto custom-scrollbar">
-                            {results.map((result) => (
-                                <li key={result.id}>
-                                    <button
-                                        className="w-full flex flex-col px-4 py-3 text-left transition-colors hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                                        onClick={() => {
-                                            setQuery(result.title);
-                                            setIsOpen(false);
-                                        }}
-                                    >
-                                        <span className="text-sm font-medium text-gray-900">
-                                            {result.title}
-                                        </span>
-                                        <span className="text-xs text-gray-500 mt-0.5">
-                                            {result.path}
-                                        </span>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <div className="px-4 py-8 text-center">
-                            <p className="text-sm text-gray-500">
-                                No results found for "
-                                <span className="font-medium text-gray-900">
-                                    {query}
-                                </span>
-                                "
-                            </p>
-                        </div>
-                    )}
-                </div>
+            <SearchBox autoFocus />
+
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {QUICK.map(([s, n]) => (
+                    <Link
+                        key={n}
+                        to={`/man/${s}/${n}`}
+                        className="rounded-full border border-[var(--border)] px-3 py-1 font-mono text-sm text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                    >
+                        {n}({s})
+                    </Link>
+                ))}
             </div>
+
+            {error && (
+                <p className="mt-10 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                    Couldn't reach the backend: {error}. Is <code>uvicorn main:app</code>{" "}
+                    running?
+                </p>
+            )}
+
+            {sections.length > 0 && (
+                <section className="mt-16 w-full">
+                    <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--muted)]">
+                        Browse by section
+                    </h2>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {sections.map((s) => (
+                            <Link
+                                key={s.id}
+                                to={`/section/${s.id}`}
+                                className="group flex items-center gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 transition hover:border-[var(--accent)]"
+                            >
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-bg)] font-mono text-lg font-bold text-[var(--accent)]">
+                                    {s.id}
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block font-medium text-[var(--fg)]">
+                                        {s.name}
+                                    </span>
+                                    <span className="text-sm text-[var(--muted)]">
+                                        {s.count.toLocaleString()} pages
+                                    </span>
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
         </div>
     );
 }
