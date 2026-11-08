@@ -1,23 +1,31 @@
+"""Local man page server, standard library only."""
+
 from __future__ import annotations
 
 import bz2
 import gzip
 import html
+import json
 import lzma
+import mimetypes
 import os
 import re
 import shutil
+import signal
 import subprocess
-from contextlib import asynccontextmanager
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlsplit
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+DIST = Path(
+    os.environ.get("MANPAGE_DIST", Path(__file__).resolve().parent.parent / "dist")
+)
 
-DIST = Path(__file__).parent / "dist"
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8642
 
 SECTION_NAMES = {
     "0": "Header files",
@@ -354,21 +362,14 @@ def score(entry: ManEntry, q: str, terms: list[str]) -> float | None:
     return s
 
 
-@asynccontextmanager
-async def lifespan(_app: FastAPI):
-    reindex()
-    yield
+class HTTPError(Exception):
+    def __init__(self, status: int, detail: str):
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
 
 
-app = FastAPI(title="manface", lifespan=lifespan)
-
-
-@app.get("/api/search")
-def search(
-    q: str = Query("", max_length=200),
-    section: str | None = None,
-    limit: int = Query(50, ge=1, le=500),
-):
+def search(q: str, section: str | None, limit: int) -> dict:
     q = q.strip().lower()
     entries = INDEX.values()
     if section:
@@ -397,8 +398,7 @@ def search(
     }
 
 
-@app.get("/api/sections")
-def sections():
+def sections() -> list[dict]:
     counts: dict[str, int] = {}
     for e in INDEX.values():
         counts[e.section[0]] = counts.get(e.section[0], 0) + 1
@@ -408,49 +408,160 @@ def sections():
     ]
 
 
-@app.get("/api/page/{name}")
-def page_any_section(name: str):
-    candidates = [e for e in BY_NAME.get(name.lower(), [])]
+def page_any_section(name: str) -> dict:
+    candidates = BY_NAME.get(name.lower(), [])
     exact = [e for e in candidates if e.name == name] or candidates
     if not exact:
-        raise HTTPException(404, f"No manual entry for {name}")
+        raise HTTPError(404, f"No manual entry for {name}")
     e = exact[0]
     return render_page(e.name, e.section)
 
 
-@app.get("/api/page/{section}/{name}")
-def page(section: str, name: str):
+def page(section: str, name: str) -> dict:
     if (name, section) not in INDEX:
         e = find_entry(name, section)
         if not e:
-            raise HTTPException(404, f"No manual entry for {name} in section {section}")
+            raise HTTPError(404, f"No manual entry for {name} in section {section}")
         return render_page(e.name, e.section)
     return render_page(name, section)
 
 
-@app.post("/api/reindex")
-def api_reindex():
+def int_param(
+    params: dict[str, list[str]], key: str, default: int, lo: int, hi: int
+) -> int:
+    raw = params.get(key, [str(default)])[-1]
+    try:
+        value = int(raw)
+    except ValueError:
+        raise HTTPError(400, f"{key} must be an integer") from None
+    if not lo <= value <= hi:
+        raise HTTPError(400, f"{key} must be between {lo} and {hi}")
+    return value
+
+
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server_version = "manpage"
+
+    def log_request(self, code="-", size="-") -> None:
+        pass  # keep the log file to errors only
+
+    def send_body(
+        self, status: int, body: bytes, ctype: str, cache: str = "no-cache"
+    ) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", cache)
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def send_json(self, obj, status: int = 200) -> None:
+        body = json.dumps(obj, ensure_ascii=False).encode()
+        self.send_body(status, body, "application/json")
+
+    def send_file(self, path: Path, cache: str = "no-cache") -> None:
+        ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        if ctype.startswith("text/") or ctype in (
+            "application/javascript",
+            "image/svg+xml",
+        ):
+            ctype += "; charset=utf-8"
+        self.send_body(200, path.read_bytes(), ctype, cache)
+
+    def do_GET(self) -> None:
+        self.dispatch("GET")
+
+    def do_HEAD(self) -> None:
+        self.dispatch("GET")
+
+    def do_POST(self) -> None:
+        self.dispatch("POST")
+
+    def dispatch(self, method: str) -> None:
+        url = urlsplit(self.path)
+        parts = [unquote(p) for p in url.path.split("/") if p]
+        try:
+            if parts[:1] == ["api"]:
+                self.send_json(self.api(method, parts[1:], parse_qs(url.query)))
+            elif method != "GET":
+                raise HTTPError(405, "Method not allowed")
+            else:
+                self.frontend(url.path)
+        except HTTPError as e:
+            self.send_json({"detail": e.detail}, e.status)
+
+    def api(self, method: str, parts: list[str], params: dict[str, list[str]]):
+        if method == "POST":
+            if parts == ["reindex"]:
+                reindex()
+                return {"pages": len(INDEX)}
+            raise HTTPError(405, "Method not allowed")
+        match parts:
+            case ["health"]:
+                return {"app": "manpage", "pid": os.getpid(), "pages": len(INDEX)}
+            case ["search"]:
+                q = params.get("q", [""])[-1]
+                if len(q) > 200:
+                    raise HTTPError(400, "q is too long")
+                section = params.get("section", [None])[-1] or None
+                return search(q, section, int_param(params, "limit", 50, 1, 500))
+            case ["sections"]:
+                return sections()
+            case ["page", name]:
+                return page_any_section(name)
+            case ["page", section, name]:
+                return page(section, name)
+        raise HTTPError(404, "Not found")
+
+    def frontend(self, raw_path: str) -> None:
+        index = DIST / "index.html"
+        if not index.is_file():
+            raise HTTPError(
+                503, f"Frontend not built: {index} is missing. Run `bun run build`."
+            )
+        rel = unquote(raw_path).lstrip("/")
+        if rel:
+            root = DIST.resolve()
+            candidate = (root / rel).resolve()
+            if candidate.is_file() and root in candidate.parents:
+                hashed = candidate.parent == root / "assets"
+                cache = "public, max-age=31536000, immutable" if hashed else "no-cache"
+                return self.send_file(candidate, cache)
+        self.send_file(index)
+
+
+class Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address) -> None:
+        if isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+            return
+        super().handle_error(request, client_address)
+
+
+def address() -> tuple[str, int]:
+    host = os.environ.get("MANPAGE_HOST", DEFAULT_HOST)
+    port = int(os.environ.get("MANPAGE_PORT", DEFAULT_PORT))
+    return host, port
+
+
+def create_server() -> Server:
+    """Bind the socket (raises OSError if the port is taken) and build the index."""
+    server = Server(address(), Handler)
     reindex()
-    return {"pages": len(INDEX)}
+    return server
 
 
-@app.get("/api/{rest:path}")
-def api_404(rest: str):
-    return JSONResponse({"detail": "Not found"}, status_code=404)
+def serve(server: Server) -> None:
+    def stop(_signum, _frame):
+        raise SystemExit(0)
 
-
-if (DIST / "assets").is_dir():
-    app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
-
-
-@app.get("/{full_path:path}")
-def spa(full_path: str):
-    if not DIST.is_dir():
-        return JSONResponse(
-            {"detail": "Frontend not built. Run `bun run build` first."},
-            status_code=503,
-        )
-    candidate = (DIST / full_path).resolve()
-    if full_path and candidate.is_file() and DIST.resolve() in candidate.parents:
-        return FileResponse(candidate)
-    return FileResponse(DIST / "index.html")
+    signal.signal(signal.SIGTERM, stop)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()

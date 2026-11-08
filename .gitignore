@@ -23,3 +23,9 @@ __pycache__
 *.njsproj
 *.sln
 *.sw?
+
+# makepkg output
+aur/src
+aur/pkg
+aur/manpages
+aur/*.pkg.tar.*

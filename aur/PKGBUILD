@@ -1,0 +1,40 @@
+# Maintainer: 2005Andrei <ascurtuny at gmail dot com>
+pkgname=manpage-git
+pkgver=r8.c9e3aa8
+pkgrel=1
+pkgdesc='Browse local man pages in your web browser'
+arch=('any')
+url='https://github.com/2005Andrei/manpages'
+license=('LicenseRef-unknown')
+depends=('python' 'man-db')
+makedepends=('git' 'bun')
+optdepends=('pandoc: richer HTML rendering of man pages'
+            'xdg-utils: open pages in the default browser')
+provides=('manpage')
+conflicts=('manpage')
+source=("git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd manpages
+  printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+  cd manpages
+  bun install --frozen-lockfile
+}
+
+build() {
+  cd manpages
+  bun run build
+}
+
+package() {
+  cd manpages
+  install -Dm755 bin/manpage "$pkgdir/usr/bin/manpage"
+  install -Dm644 -t "$pkgdir/usr/share/manpage/manpage" manpage/*.py
+  find dist -type f -exec install -Dm644 {} "$pkgdir/usr/share/manpage/{}" \;
+  python -m compileall -q -d /usr/share/manpage/manpage "$pkgdir/usr/share/manpage/manpage"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

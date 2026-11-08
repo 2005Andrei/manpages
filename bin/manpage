@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+import sys
+from pathlib import Path
+
+here = Path(__file__).resolve().parent.parent
+for candidate in (here / "share" / "manpage", here):
+    if (candidate / "manpage" / "cli.py").is_file():
+        sys.path.insert(0, str(candidate))
+        break
+
+from manpage.cli import main  # noqa: E402
+
+sys.exit(main())
