@@ -37,3 +37,5 @@ Logs go to `~/.local/state/manpage/server.log`
 ## Development
 
 `just run` starts Vite with hot reload on :5173 or 5174 (if you're running already running vite) and the API on :8642
+
+Still have to improve parsing.
